@@ -7,6 +7,7 @@ import argparse
 import requests
 import threading
 import os, sys
+from FileDialog import *
 
 if sys.version_info[0] == 2:
     from Tkinter import *
@@ -25,8 +26,32 @@ else:  #Python 3.x
     #import tkinter.filedialog as tkFileDialog
     #import tkinter.simpledialog as tkSimpleDialog    #askstring()
 
+top = Tk()
+default_value = StringVar()
+default_value.set("dict/dict.txt")
+
 def hello():  
     print "hello!"
+def selectDict():
+    fd = LoadFileDialog(top)
+    default_value.set(fd.go())
+def _start(scanSite, scanDict, scanOutput, threadNum):
+    scan = Dirscan(scanSite, scanDict, scanOutput, threadNum)
+
+    for i in range(threadNum):
+        t = threading.Thread(target=scan.run)
+        t.setDaemon(True)
+        t.start()
+
+    while True:
+        if threading.activeCount() <= 1 :
+            break
+        else:
+            try:
+                time.sleep(0.1)
+            except KeyboardInterrupt, e:
+                print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
+                scan.STOP_ME = True 
 
 class Dirscan(object):
 
@@ -91,38 +116,20 @@ class Dirscan(object):
         while not self.q.empty() and self.STOP_ME == False:
             url = self.scanSite + self.q.get()
             self._scan(url)
-    def _start(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('scanSite', help="The website to be scanned", type=str)
-        parser.add_argument('-d', '--dict', dest="scanDict", help="Dictionary for scanning", type=str, default="dict/dict.txt")
-        parser.add_argument('-o', '--output', dest="scanOutput", help="Results saved files", type=str, default=0)
-        parser.add_argument('-t', '--thread', dest="threadNum", help="Number of threads running the program", type=int, default=60)
-        args = parser.parse_args()
-
-        scan = Dirscan(args.scanSite, args.scanDict, args.scanOutput, args.threadNum)
-
-        for i in range(args.threadNum):
-            t = threading.Thread(target=scan.run)
-            t.setDaemon(True)
-            t.start()
-
-        while True:
-            if threading.activeCount() <= 1 :
-                break
-            else:
-                try:
-                    time.sleep(0.1)
-                except KeyboardInterrupt, e:
-                    print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
-                    scan.STOP_ME = True
+    # def _start(self):
+    #     # parser = argparse.ArgumentParser()
+    #     # parser.add_argument('scanSite', help="The website to be scanned", type=str)
+    #     # parser.add_argument('-d', '--dict', dest="scanDict", help="Dictionary for scanning", type=str, default="dict/dict.txt")
+    #     # parser.add_argument('-o', '--output', dest="scanOutput", help="Results saved files", type=str, default=0)
+    #     # parser.add_argument('-t', '--thread', dest="threadNum", help="Number of threads running the program", type=int, default=60)
+    #     # args = parser.parse_args()
 class Application_ui(Frame):
     #这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master.title('Form1')
         self.master.geometry('389x339')
-        self.createWidgets()
- 
+        self.createWidgets()   
     def createWidgets(self):
         self.top = self.winfo_toplevel()
  
@@ -136,23 +143,22 @@ class Application_ui(Frame):
         self.TabStrip1__Tab1Lbl.place(relx=0.1,rely=0.5)
         self.TabStrip1.add(self.TabStrip1__Tab1, text='目录扫描')
 
-        Label(self.TabStrip1__Tab1, text="Host").grid(row=0,sticky=W, padx=3, pady=3)
+        Label(self.TabStrip1__Tab1, text="ScanSite").grid(row=0,sticky=W, padx=3, pady=3)
         Label(self.TabStrip1__Tab1, text="Dict").grid(row=1,sticky=W, padx=3, pady=3)
         Label(self.TabStrip1__Tab1, text="Thread").grid(row=2,sticky=W, padx=3, pady=3)
-  
-        e1 = Entry(self.TabStrip1__Tab1).grid(row=0, column=1, padx=3, pady=3)
-        e2 = Entry(self.TabStrip1__Tab1).grid(row=1, column=1, padx=3, pady=3)
-        e3 = Entry(self.TabStrip1__Tab1).grid(row=2, column=1, padx=3, pady=3)
+        
+        u = StringVar()
+        v1 = IntVar()
 
-        Button(top, text ="select dictionary for scanning", command = helloCallBack).grid(row=1, column=2, padx=3, pady=3)
-        Button(top, text ="start", command = Dirscan()._start).grid(row=4,sticky=W, padx=3, pady=3)
+        e1 = Entry(self.TabStrip1__Tab1, textvariable = u).grid(row=0, column=1, padx=3, pady=3)
+        e2 = Entry(self.TabStrip1__Tab1, textvariable = default_value).grid(row=1, column=1, padx=3, pady=3)
+        e3 = Entry(self.TabStrip1__Tab1, textvariable = v1).grid(row=2, column=1, padx=3, pady=3)
 
-        c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = IntVar(), onvalue = 1, offvalue = 0).grid(row=1, column=2, padx=3, pady=3)
- 
-        self.TabStrip1__Tab2 = Frame(self.TabStrip1)
-        self.TabStrip1__Tab2Lbl = Label(self.TabStrip1__Tab2, text='Please add widgets in code.')
-        self.TabStrip1__Tab2Lbl.place(relx=0.1,rely=0.5)
-        self.TabStrip1.add(self.TabStrip1__Tab2, text='XSS扫描')
+        v2 = IntVar()
+        c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = v2, onvalue = 1, offvalue = 0).grid(row=2, column=2, padx=3, pady=3)
+
+        Button(self.TabStrip1__Tab1, text ="select dictionary for scanning", command = selectDict).grid(row=1, column=2, padx=3, pady=3)
+        Button(self.TabStrip1__Tab1, text ="start", command = lambda : _start(u.get(),default_value.get(),v2.get(),v1.get())).grid(row=4,sticky=W, padx=3, pady=3)
 
         self.TabStrip1__Tab3 = Frame(self.TabStrip1)
         self.TabStrip1__Tab3Lbl = Label(self.TabStrip1__Tab3, text='Please add widgets in code.')
@@ -166,8 +172,6 @@ class Application(Application_ui):
         Application_ui.__init__(self, master)
  
 if __name__ == "__main__":
-    top = Tk()
-
     menubar = Menu(top)    
 
     # create a pulldown 
