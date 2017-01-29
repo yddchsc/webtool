@@ -91,8 +91,30 @@ class Dirscan(object):
         while not self.q.empty() and self.STOP_ME == False:
             url = self.scanSite + self.q.get()
             self._scan(url)
+    def _start(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('scanSite', help="The website to be scanned", type=str)
+        parser.add_argument('-d', '--dict', dest="scanDict", help="Dictionary for scanning", type=str, default="dict/dict.txt")
+        parser.add_argument('-o', '--output', dest="scanOutput", help="Results saved files", type=str, default=0)
+        parser.add_argument('-t', '--thread', dest="threadNum", help="Number of threads running the program", type=int, default=60)
+        args = parser.parse_args()
 
-		
+        scan = Dirscan(args.scanSite, args.scanDict, args.scanOutput, args.threadNum)
+
+        for i in range(args.threadNum):
+            t = threading.Thread(target=scan.run)
+            t.setDaemon(True)
+            t.start()
+
+        while True:
+            if threading.activeCount() <= 1 :
+                break
+            else:
+                try:
+                    time.sleep(0.1)
+                except KeyboardInterrupt, e:
+                    print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
+                    scan.STOP_ME = True
 class Application_ui(Frame):
     #这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
     def __init__(self, master=None):
@@ -122,7 +144,8 @@ class Application_ui(Frame):
         e2 = Entry(self.TabStrip1__Tab1).grid(row=1, column=1, padx=3, pady=3)
         e3 = Entry(self.TabStrip1__Tab1).grid(row=2, column=1, padx=3, pady=3)
 
-        Button(top, text ="Hello,Python!少壮不努力，老大学编程.-易百在线教程 - www.yiibai.com", command = helloCallBack).grid(row=3,sticky=W, padx=3, pady=3)
+        Button(top, text ="select dictionary for scanning", command = helloCallBack).grid(row=1, column=2, padx=3, pady=3)
+        Button(top, text ="start", command = Dirscan()._start).grid(row=4,sticky=W, padx=3, pady=3)
 
         c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = IntVar(), onvalue = 1, offvalue = 0).grid(row=1, column=2, padx=3, pady=3)
  
@@ -170,27 +193,3 @@ if __name__ == "__main__":
     top.config(menu=menubar) 
 
     Application(top).mainloop()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('scanSite', help="The website to be scanned", type=str)
-    parser.add_argument('-d', '--dict', dest="scanDict", help="Dictionary for scanning", type=str, default="dict/dict.txt")
-    parser.add_argument('-o', '--output', dest="scanOutput", help="Results saved files", type=str, default=0)
-    parser.add_argument('-t', '--thread', dest="threadNum", help="Number of threads running the program", type=int, default=60)
-    args = parser.parse_args()
-
-    scan = Dirscan(args.scanSite, args.scanDict, args.scanOutput, args.threadNum)
-
-    for i in range(args.threadNum):
-        t = threading.Thread(target=scan.run)
-        t.setDaemon(True)
-        t.start()
-
-    while True:
-        if threading.activeCount() <= 1 :
-            break
-        else:
-            try:
-                time.sleep(0.1)
-            except KeyboardInterrupt, e:
-                print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
-                scan.STOP_ME = True
