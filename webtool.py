@@ -1,0 +1,196 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import time
+import Queue
+import argparse
+import requests
+import threading
+import os, sys
+
+if sys.version_info[0] == 2:
+    from Tkinter import *
+    from tkFont import Font
+    from ttk import *
+    #Usage:showinfo/warning/error,askquestion/okcancel/yesno/retrycancel
+    from tkMessageBox import *
+    #Usage:f=tkFileDialog.askopenfilename(initialdir='E:/Python')
+    #import tkFileDialog
+    #import tkSimpleDialog
+else:  #Python 3.x
+    from tkinter import *
+    from tkinter.font import Font
+    from tkinter.ttk import *
+    from tkinter.messagebox import *
+    #import tkinter.filedialog as tkFileDialog
+    #import tkinter.simpledialog as tkSimpleDialog    #askstring()
+
+def hello():  
+    print "hello!"
+
+class Dirscan(object):
+
+    def __init__(self, scanSite, scanDict, scanOutput,threadNum):
+        print 'Dirscan is running!'
+        self.scanSite = scanSite if scanSite.find('://') != -1 else 'http://%s' % scanSite
+        print 'Scan target:',self.scanSite
+        self.scanDict = scanDict
+        self.scanOutput = scanSite.rstrip('/').replace('https://', '').replace('http://', '')+'.txt' if scanOutput == 0 else scanOutput
+        truncate = open(self.scanOutput,'w')
+        truncate.close()
+        self.threadNum = threadNum
+        self.lock = threading.Lock()
+        self._loadHeaders()
+        self._loadDict(self.scanDict)
+        self._analysis404()
+        self.STOP_ME = False
+
+    def _loadDict(self, dict_list):
+        self.q = Queue.Queue()
+        with open(dict_list) as f:
+            for line in f:
+                if line[0:1] != '#':
+                    self.q.put(line.strip())
+        if self.q.qsize() > 0:
+            print 'Total Dictionary:',self.q.qsize()
+        else:
+            print 'Dict is Null ???'
+            quit()
+
+    def _loadHeaders(self):
+        self.headers = {
+            'Accept': '*/*',
+            'Referer': 'http://www.baidu.com',
+            'User-Agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; ',
+            'Cache-Control': 'no-cache',
+        }
+    def _analysis404(self):
+        notFoundPage = requests.get(self.scanSite + '/songgeshigedashuaibi/hello.html', allow_redirects=False)
+        self.notFoundPageText = notFoundPage.text.replace('/songgeshigedashuaibi/hello.html', '')
+
+    def _writeOutput(self, result):
+        self.lock.acquire()
+        with open(self.scanOutput, 'a+') as f:
+            f.write(result + '\n')
+        self.lock.release()
+
+    def _scan(self, url):
+        html_result = 0
+        try:
+            html_result = requests.get(url, headers=self.headers, allow_redirects=False, timeout=60)
+        except requests.exceptions.ConnectionError:
+            # print 'Request Timeout:%s' % url
+            pass
+        finally:
+            if html_result != 0:
+                if html_result.status_code == 200 and html_result.text != self.notFoundPageText:
+                    print '[%i]%s' % (html_result.status_code, html_result.url)
+                    self._writeOutput('[%i]%s' % (html_result.status_code, html_result.url))
+
+    def run(self):
+        while not self.q.empty() and self.STOP_ME == False:
+            url = self.scanSite + self.q.get()
+            self._scan(url)
+
+		
+class Application_ui(Frame):
+    #这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
+    def __init__(self, master=None):
+        Frame.__init__(self, master)
+        self.master.title('Form1')
+        self.master.geometry('389x339')
+        self.createWidgets()
+ 
+    def createWidgets(self):
+        self.top = self.winfo_toplevel()
+ 
+        self.style = Style()
+ 
+        self.TabStrip1 = Notebook(self.top)
+        self.TabStrip1.place(relx=0.021, rely=0.021, relwidth=0.957, relheight=0.956)
+ 
+        self.TabStrip1__Tab1 = Frame(self.TabStrip1)
+        self.TabStrip1__Tab1Lbl = Label(self.TabStrip1__Tab1)
+        self.TabStrip1__Tab1Lbl.place(relx=0.1,rely=0.5)
+        self.TabStrip1.add(self.TabStrip1__Tab1, text='目录扫描')
+
+        Label(self.TabStrip1__Tab1, text="Host").grid(row=0,sticky=W, padx=3, pady=3)
+        Label(self.TabStrip1__Tab1, text="Dict").grid(row=1,sticky=W, padx=3, pady=3)
+        Label(self.TabStrip1__Tab1, text="Thread").grid(row=2,sticky=W, padx=3, pady=3)
+  
+        e1 = Entry(self.TabStrip1__Tab1).grid(row=0, column=1, padx=3, pady=3)
+        e2 = Entry(self.TabStrip1__Tab1).grid(row=1, column=1, padx=3, pady=3)
+        e3 = Entry(self.TabStrip1__Tab1).grid(row=2, column=1, padx=3, pady=3)
+
+        Button(top, text ="Hello,Python!少壮不努力，老大学编程.-易百在线教程 - www.yiibai.com", command = helloCallBack).grid(row=3,sticky=W, padx=3, pady=3)
+
+        c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = IntVar(), onvalue = 1, offvalue = 0).grid(row=1, column=2, padx=3, pady=3)
+ 
+        self.TabStrip1__Tab2 = Frame(self.TabStrip1)
+        self.TabStrip1__Tab2Lbl = Label(self.TabStrip1__Tab2, text='Please add widgets in code.')
+        self.TabStrip1__Tab2Lbl.place(relx=0.1,rely=0.5)
+        self.TabStrip1.add(self.TabStrip1__Tab2, text='XSS扫描')
+
+        self.TabStrip1__Tab3 = Frame(self.TabStrip1)
+        self.TabStrip1__Tab3Lbl = Label(self.TabStrip1__Tab3, text='Please add widgets in code.')
+        self.TabStrip1__Tab3Lbl.place(relx=0.1,rely=0.5)
+        self.TabStrip1.add(self.TabStrip1__Tab3, text='SQL注入扫描')
+ 
+ 
+class Application(Application_ui):
+    #这个类实现具体的事件处理回调函数。界面生成代码在Application_ui中。
+    def __init__(self, master=None):
+        Application_ui.__init__(self, master)
+ 
+if __name__ == "__main__":
+    top = Tk()
+
+    menubar = Menu(top)    
+
+    # create a pulldown 
+    filemenu = Menu(menubar, tearoff=0)  
+    filemenu.add_command(label="Open", command=hello)  
+    filemenu.add_command(label="Save", command=hello)  
+    filemenu.add_separator() 
+    filemenu.add_command(label="Exit", command=top.quit)  
+    menubar.add_cascade(label="File", menu=filemenu)  
+
+    # create more pulldown menus  
+    editmenu = Menu(menubar, tearoff=0)  
+    editmenu.add_command(label="Cut", command=hello)  
+    editmenu.add_command(label="Copy", command=hello)  
+    editmenu.add_command(label="Paste", command=hello)  
+    menubar.add_cascade(label="Edit", menu=editmenu)  
+
+    helpmenu = Menu(menubar, tearoff=0) 
+    helpmenu.add_command(label="About", command=hello)  
+    menubar.add_cascade(label="Help", menu=helpmenu)  
+
+    # display the menu  
+    top.config(menu=menubar) 
+
+    Application(top).mainloop()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('scanSite', help="The website to be scanned", type=str)
+    parser.add_argument('-d', '--dict', dest="scanDict", help="Dictionary for scanning", type=str, default="dict/dict.txt")
+    parser.add_argument('-o', '--output', dest="scanOutput", help="Results saved files", type=str, default=0)
+    parser.add_argument('-t', '--thread', dest="threadNum", help="Number of threads running the program", type=int, default=60)
+    args = parser.parse_args()
+
+    scan = Dirscan(args.scanSite, args.scanDict, args.scanOutput, args.threadNum)
+
+    for i in range(args.threadNum):
+        t = threading.Thread(target=scan.run)
+        t.setDaemon(True)
+        t.start()
+
+    while True:
+        if threading.activeCount() <= 1 :
+            break
+        else:
+            try:
+                time.sleep(0.1)
+            except KeyboardInterrupt, e:
+                print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
+                scan.STOP_ME = True
