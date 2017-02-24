@@ -29,6 +29,7 @@ else:  #Python 3.x
 top = Tk()
 default_value = StringVar()
 default_value.set("dict/dict.txt")
+# results = 
 
 def hello():  
     print "hello!"
@@ -50,7 +51,8 @@ def _start(scanSite, scanDict, scanOutput, threadNum):
             try:
                 time.sleep(0.1)
             except KeyboardInterrupt, e:
-                print '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
+                print  '\n[WARNING] User aborted, wait all slave threads to exit, current(%i)' % threading.activeCount()
+                #u1.set(tuple(results))
                 scan.STOP_ME = True 
 
 class Dirscan(object):
@@ -59,6 +61,7 @@ class Dirscan(object):
         print 'Dirscan is running!'
         self.scanSite = scanSite if scanSite.find('://') != -1 else 'http://%s' % scanSite
         print 'Scan target:',self.scanSite
+        #u1.set(tuple(results))
         self.scanDict = scanDict
         self.scanOutput = scanSite.rstrip('/').replace('https://', '').replace('http://', '')+'.txt' if scanOutput == 0 else scanOutput
         truncate = open(self.scanOutput,'w')
@@ -77,9 +80,11 @@ class Dirscan(object):
                 if line[0:1] != '#':
                     self.q.put(line.strip())
         if self.q.qsize() > 0:
-            print 'Total Dictionary:',self.q.qsize()
+            print 'Total Dictionary:',str(self.q.qsize())
+            #u1.set(tuple(results))
         else:
             print 'Dict is Null ???'
+            #u1.set(tuple(results))
             quit()
 
     def _loadHeaders(self):
@@ -110,6 +115,7 @@ class Dirscan(object):
             if html_result != 0:
                 if html_result.status_code == 200 and html_result.text != self.notFoundPageText:
                     print '[%i]%s' % (html_result.status_code, html_result.url)
+                    #u1.set(tuple(results))
                     self._writeOutput('[%i]%s' % (html_result.status_code, html_result.url))
 
     def run(self):
@@ -127,9 +133,9 @@ class Application_ui(Frame):
     #这个类仅实现界面生成功能，具体事件处理代码在子类Application中。
     def __init__(self, master=None):
         Frame.__init__(self, master)
-        self.master.title('Form1')
-        self.master.geometry('389x339')
-        self.createWidgets()   
+        self.master.title('Webtool')
+        self.master.geometry('389x450')
+        self.createWidgets() 
     def createWidgets(self):
         self.top = self.winfo_toplevel()
  
@@ -149,22 +155,22 @@ class Application_ui(Frame):
         
         u = StringVar()
         v1 = IntVar()
+        v1.set(20)
 
-        e1 = Entry(self.TabStrip1__Tab1, textvariable = u).grid(row=0, column=1, padx=3, pady=3)
-        e2 = Entry(self.TabStrip1__Tab1, textvariable = default_value).grid(row=1, column=1, padx=3, pady=3)
-        e3 = Entry(self.TabStrip1__Tab1, textvariable = v1).grid(row=2, column=1, padx=3, pady=3)
+        e1 = Entry(self.TabStrip1__Tab1, textvariable = u).grid(row=0, column=1, sticky=W,padx=3, pady=3)
+        e2 = Entry(self.TabStrip1__Tab1, textvariable = default_value).grid(row=1,sticky=W, column=1, padx=3, pady=3)
+        e3 = Entry(self.TabStrip1__Tab1, textvariable = v1).grid(row=2, column=1,sticky=W, padx=3, pady=3)
 
         v2 = IntVar()
-        c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = v2, onvalue = 1, offvalue = 0).grid(row=2, column=2, padx=3, pady=3)
+        c1 = Checkbutton(self.TabStrip1__Tab1, text = "output", variable = v2, onvalue = 1, offvalue = 0).grid(row=0, column=2,sticky=W, padx=3, pady=3)
 
-        Button(self.TabStrip1__Tab1, text ="select dictionary for scanning", command = selectDict).grid(row=1, column=2, padx=3, pady=3)
-        Button(self.TabStrip1__Tab1, text ="start", command = lambda : _start(u.get(),default_value.get(),v2.get(),v1.get())).grid(row=4,sticky=W, padx=3, pady=3)
+        Button(self.TabStrip1__Tab1, text ="select dictionary for scanning", command = selectDict).grid(row=1, column=2,sticky=W, padx=3, pady=3)
+        Button(self.TabStrip1__Tab1, text ="start", command = lambda : _start(u.get(),default_value.get(),v2.get(),v1.get())).grid(row=2,column=2,sticky=W, padx=3, pady=3)
 
         self.TabStrip1__Tab3 = Frame(self.TabStrip1)
         self.TabStrip1__Tab3Lbl = Label(self.TabStrip1__Tab3, text='Please add widgets in code.')
         self.TabStrip1__Tab3Lbl.place(relx=0.1,rely=0.5)
         self.TabStrip1.add(self.TabStrip1__Tab3, text='SQL注入扫描')
- 
  
 class Application(Application_ui):
     #这个类实现具体的事件处理回调函数。界面生成代码在Application_ui中。
@@ -195,5 +201,5 @@ if __name__ == "__main__":
 
     # display the menu  
     top.config(menu=menubar) 
-
-    Application(top).mainloop()
+    a = Application(top)
+    a.mainloop()

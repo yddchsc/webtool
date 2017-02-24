@@ -1,0 +1,5 @@
+[200]http://www.baidu.com/index.html
+[200]http://www.baidu.com/robots.txt
+[200]http://www.baidu.com/cache/
+[200]http://www.baidu.com/robots.txt
+[200]http://www.baidu.com/favicon.ico
